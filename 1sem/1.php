@@ -26,9 +26,10 @@ class Student{
     }    
 }
 
-$student1= new Student("Sapatan", "BSIT", "2nd year", "24-3802");
+$student1= new Student("Lee", "BSIT", "2nd year", "242");
 echo $student1->introduction() . "<br>";
 echo $student1->registration() ."<br>";
 echo $student1->status(); ""
+
 
 ?>
