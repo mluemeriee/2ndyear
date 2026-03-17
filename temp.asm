@@ -1,55 +1,61 @@
 section .data
-    msg1 db "Enter temperature value: ", 0
-    msg2 db "Convert to (1) Celsius or (2) Fahrenheit? ", 0
-    resultMsg db "Result: ", 0
-    newline db 10, 0
+    msg1 db "Enter temperature value: "
+    len1 equ $ - msg1
+
+    msg2 db "Convert to (1) Celsius or (2) Fahrenheit? "
+    len2 equ $ - msg2
+
+    resultMsg db "Result: "
+    len3 equ $ - resultMsg
+
+    newline db 10
 
 section .bss
-    input resb 10
+    input resb 16
     choice resb 2
-    num resq 1
+    output resb 16
 
 section .text
     global _start
 
 _start:
 
-    ; Print msg1
+    ; ---- PRINT msg1 ----
     mov rax, 1
     mov rdi, 1
     mov rsi, msg1
-    mov rdx, 30
+    mov rdx, len1
     syscall
 
-    ; Read input
+    ; ---- READ INPUT ----
     mov rax, 0
     mov rdi, 0
     mov rsi, input
-    mov rdx, 10
+    mov rdx, 16
     syscall
 
-    ; Convert ASCII to number (simple)
+    ; ---- CONVERT INPUT STRING TO INT ----
     mov rsi, input
     call atoi
-    mov [num], rax
+    mov rbx, rax   ; store number
 
-    ; Print msg2
+    ; ---- PRINT msg2 ----
     mov rax, 1
     mov rdi, 1
     mov rsi, msg2
-    mov rdx, 45
+    mov rdx, len2
     syscall
 
-    ; Read choice
+    ; ---- READ CHOICE ----
     mov rax, 0
     mov rdi, 0
     mov rsi, choice
     mov rdx, 2
     syscall
 
-    mov rax, [num]
+    mov rax, rbx
 
-    ; Check choice
+    ; ---- CHECK CHOICE ----
     cmp byte [choice], '2'
     je c_to_f
 
@@ -57,81 +63,93 @@ f_to_c:
     ; (F - 32) * 5 / 9
     sub rax, 32
     imul rax, 5
-    mov rbx, 9
+    mov rcx, 9
     xor rdx, rdx
-    div rbx
-    jmp print
+    div rcx
+    jmp print_result
 
 c_to_f:
     ; (C * 9 / 5) + 32
     imul rax, 9
-    mov rbx, 5
+    mov rcx, 5
     xor rdx, rdx
-    div rbx
+    div rcx
     add rax, 32
 
-print:
-    ; Print result message
-    mov rbx, rax
+print_result:
+    ; ---- PRINT "Result: " ----
+    mov rbx, rax   ; save result
+
     mov rax, 1
     mov rdi, 1
     mov rsi, resultMsg
-    mov rdx, 8
+    mov rdx, len3
     syscall
 
-    ; Convert number to string
+    ; ---- CONVERT NUMBER TO STRING ----
     mov rax, rbx
+    mov rdi, output + 15   ; start from end
     call itoa
 
-    ; Print newline
+    ; rsi = start of number string
+    mov rax, 1
+    mov rdi, 1
+    mov rdx, rbx   ; length returned in rbx
+    syscall
+
+    ; ---- PRINT NEWLINE ----
     mov rax, 1
     mov rdi, 1
     mov rsi, newline
     mov rdx, 1
     syscall
 
-    ; Exit
+    ; ---- EXIT ----
     mov rax, 60
     xor rdi, rdi
     syscall
 
-; ------------------------
-; Convert string to int
+; ==========================
+; ASCII TO INTEGER (atoi)
+; ==========================
 atoi:
     xor rax, rax
+
 atoi_loop:
-    movzx rbx, byte [rsi]
-    cmp rbx, 10
+    movzx rcx, byte [rsi]
+    cmp rcx, 10        ; newline
     je atoi_done
-    sub rbx, '0'
+    cmp rcx, 0
+    je atoi_done
+
+    sub rcx, '0'
     imul rax, 10
-    add rax, rbx
+    add rax, rcx
+
     inc rsi
     jmp atoi_loop
+
 atoi_done:
     ret
 
-; ------------------------
-; Convert int to string
+; ==========================
+; INTEGER TO ASCII (itoa)
+; ==========================
 itoa:
     mov rcx, 10
-    mov rbx, 0
-    mov rdi, input + 9
+    mov rbx, 0        ; digit count
 
 itoa_loop:
     xor rdx, rdx
     div rcx
     add rdx, '0'
+
     dec rdi
     mov [rdi], dl
     inc rbx
+
     test rax, rax
     jnz itoa_loop
 
-    ; Print number
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, rdi
-    mov rdx, rbx
-    syscall
+    mov rsi, rdi      ; pointer to string
     ret
